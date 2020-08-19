@@ -1,57 +1,54 @@
-import { gql, useMutation, useQuery } from '@apollo/client';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import debounce from 'lodash.debounce';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Container from './components/Container.js';
 import Form from './components/Form.js';
+import Header from './components/Header.js';
+import Loading from './components/Loading.js';
 import Row from './components/Row.js';
+import ThreadContainer from './components/ThreadContainer.js';
 import socket from './socket.js';
-import debounce from 'lodash.debounce';
-
-const ADD_MESSAGE = gql`
-  mutation addMessage($author: String!, $content: String!) {
-    addMessage(data: { author: $author, content: $content }) {
-      author
-      content
-      date
-    }
-  }
-`;
-const GET_MESSAGES = gql`
-  query getMessages {
-    messages {
-      content
-      author
-      date
-    }
-  }
-`;
-
-function position(name) {
-  return name === 'User 2' ? 'left' : 'right';
-}
 
 function App() {
-  const { loading, error, data } = useQuery(GET_MESSAGES);
+  const [me, setMe] = useState('');
+  const [messages, setMessages] = useState([]);
   const [value, setValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const onChange = (e) => setValue(e.target.value);
-  const [addMessage] = useMutation(ADD_MESSAGE);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   useEffect(() => {
-    socket.on('connect', function () {
-      console.log('connexion');
+    socket.on('id', function (id) {
+      setMe(id);
+    });
+
+    socket.on('start-waiting', () => {
+      setIsWaiting(true);
+    });
+
+    socket.on('end-waiting', () => {
+      setIsWaiting(false);
     });
 
     socket.on('writing', (typing) => {
       setIsTyping(typing);
     });
+
+    socket.on('update-messages', (messages) => {
+      setMessages(messages);
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        left: 100,
+        behavior: 'smooth',
+      });
+    });
   }, []);
+
+  const position = (name) => (name === me ? 'right' : 'left');
 
   const onKeyPress = (e) => {
     socket.emit('start-writing', true);
 
-    if (e.keyCode !== 13) return;
-
-    addMessage({ variables: { author: 'Kevin', content: value } });
+    if (e.which !== 13) return;
+    socket.emit('send-message', value);
     setValue('');
   };
 
@@ -62,25 +59,26 @@ function App() {
 
   const onKeyUp = useCallback((e) => keyUpDebounced(), [keyUpDebounced]);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error :(</p>;
+  const onChange = (e) => setValue(e.target.value);
+
+  if (isWaiting) return <Loading />;
 
   return (
     <Container>
-      <header className="App-header">
-        <h1>Anonymous chat</h1>
-      </header>
+      <Header>
+        <h1>Dummy Tchat</h1>
+      </Header>
 
-      <div>
-        {data.messages &&
-          data.messages.map(({ content, author, date }, i) => (
+      <ThreadContainer>
+        {messages.length > 0 &&
+          messages.map(({ content, author, date }, i) => (
             <Row
               key={`${date}_${i}`}
               content={content}
               position={position(author)}
             />
           ))}
-      </div>
+      </ThreadContainer>
 
       {isTyping && <p>Votre correspondant est entrain d'écrire...</p>}
       <Form

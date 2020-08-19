@@ -9,7 +9,8 @@ const Bull = styled.div`
   margin-bottom: 0.5em;
 
   & div {
-    padding: 0.5em 1em;
+    max-width: 70%;
+    padding: 1em;
     border-radius: 20px;
     background: ${({ position }) => (position === 'left' ? '#ddd' : '#126dff')};
     color: ${({ position }) => (position === 'left' ? '#1A1A1A' : '#fff')};

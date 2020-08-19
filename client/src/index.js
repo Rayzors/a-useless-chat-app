@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { createGlobalStyle } from 'styled-components';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
-import { createGlobalStyle } from 'styled-components';
-import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
 
 const GlobalStyle = createGlobalStyle`
 
@@ -17,17 +16,10 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-const client = new ApolloClient({
-  uri: 'http://localhost:4000/graphql',
-  cache: new InMemoryCache(),
-});
-
 ReactDOM.render(
   <React.StrictMode>
     <GlobalStyle />
-    <ApolloProvider client={client}>
-      <App />
-    </ApolloProvider>
+    <App />
   </React.StrictMode>,
   document.getElementById('root')
 );

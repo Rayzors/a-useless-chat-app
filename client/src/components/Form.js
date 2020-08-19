@@ -9,6 +9,8 @@ const Form = styled.div`
   right: 0;
   width: 100%;
   padding: 1em;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(15px);
 
   & input {
     border-radius: 20px;
