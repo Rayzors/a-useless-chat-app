@@ -1,6 +1,6 @@
 const Express = require('express');
 const cors = require('cors');
-let messages = require('./datas');
+const Message = require('./models/message');
 
 const PORT = 4000;
 const rooms = [];
@@ -46,16 +46,14 @@ io.on('connect', (socket) => {
   });
 
   socket.on('send-message', (message) => {
-    messages.push({
+    Message.add({
       date: new Date().toISOString(),
       author: socket.id,
       content: message,
       roomName,
     });
 
-    const roomMessage = messages.filter(
-      (message) => message.roomName === roomName
-    );
+    const roomMessage = Message.getByRoomName(roomName);
 
     socket.to(roomName).emit('writing', false);
     io.to(roomName).emit('update-messages', roomMessage);
@@ -106,6 +104,7 @@ function removeUserInRoom(socket, roomIndex) {
 }
 
 function removeMessagesByRoomName(roomName) {
-  messages = messages.filter((message) => message.roomName !== roomName);
+  const messages = Message.removeByRoomName(roomName);
+
   io.to(roomName).emit('update-messages', messages);
 }
