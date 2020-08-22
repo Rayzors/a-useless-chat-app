@@ -32,7 +32,8 @@ class Message {
    * @memberof Message
    */
   removeByRoomName(roomName) {
-    return this.messages.filter((message) => message.roomName !== roomName);
+    this.messages = this.messages.filter((message) => message.roomName !== roomName);
+    return [];
   }
 }
 

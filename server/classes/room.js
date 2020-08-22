@@ -13,9 +13,7 @@ class Room {
   addParticipant(participant) {
     this.participants.add(participant);
 
-    participant.join(this.name, () => {
-      console.log(`${this.name} joined`);
-    });
+    participant.join(this.name);
   }
 
   removeParticipant(participant) {
@@ -30,6 +28,16 @@ class Room {
    */
   isAvailable() {
     return this.participants.size < 2;
+  }
+
+  /**
+   * Checks if the room is empty
+   *
+   * @returns
+   * @memberof Room
+   */
+  isEmpty() {
+    return this.participants.size === 0;
   }
 }
 
