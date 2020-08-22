@@ -13,7 +13,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [value, setValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isWaiting, setIsWaiting] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(true);
 
   useEffect(() => {
     socket.on('id', function (id) {
