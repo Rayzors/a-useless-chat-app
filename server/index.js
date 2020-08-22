@@ -1,17 +1,12 @@
 const Express = require('express');
 const cors = require('cors');
-const Message = require('./models/message');
+const Message = require('./classes/message');
+const RoomCollection = require('./classes/rooms');
 
 const PORT = 4000;
-const rooms = [];
 const app = Express();
 
-app.use(
-  cors({
-    origin: 'http://localhost:3000',
-    credentials: true,
-  })
-);
+app.use(cors());
 
 const serve = app.listen(PORT, () => {
   console.log(`🚀 Server ready at http://localhost:${PORT}`);
@@ -20,29 +15,30 @@ const serve = app.listen(PORT, () => {
 const io = require('socket.io')(serve);
 
 io.on('connect', (socket) => {
-  if (!isThereARoomAvailable()) {
-    createRoom();
+  let room = RoomCollection.getAvailableRoom();
+
+  if (!room) {
+    room = RoomCollection.createRoom();
   }
 
-  const availableRoomIndex = getTheFirstRoomNotFullIndex();
-  const roomName = getRoomName(availableRoomIndex);
-  setUserInRoom(socket, availableRoomIndex);
-  setWaiting(roomName, availableRoomIndex);
+  room.addParticipant(socket);
+  setWaiting(room);
 
   socket.emit('id', socket.id);
 
   socket.on('disconnect', () => {
-    removeUserInRoom(socket, availableRoomIndex);
-    removeMessagesByRoomName(roomName);
-    setWaiting(roomName, availableRoomIndex);
+    room.removeParticipant(socket);
+    const messages = Message.removeByRoomName(room.name);
+    io.to(room.name).emit('update-messages', messages);
+    setWaiting(room);
   });
 
   socket.on('start-writing', (isTyping) => {
-    socket.to(roomName).emit('writing', isTyping);
+    socket.to(room.name).emit('writing', isTyping);
   });
 
   socket.on('stop-writing', (isTyping) => {
-    socket.to(roomName).emit('writing', isTyping);
+    socket.to(room.name).emit('writing', isTyping);
   });
 
   socket.on('send-message', (message) => {
@@ -50,61 +46,20 @@ io.on('connect', (socket) => {
       date: new Date().toISOString(),
       author: socket.id,
       content: message,
-      roomName,
+      roomName: room.name,
     });
 
-    const roomMessage = Message.getByRoomName(roomName);
+    const roomMessage = Message.getByRoomName(room.name);
 
-    socket.to(roomName).emit('writing', false);
-    io.to(roomName).emit('update-messages', roomMessage);
+    socket.to(room.name).emit('writing', false);
+    io.to(room.name).emit('update-messages', roomMessage);
   });
 });
 
-function getRoomName(roomIndex) {
-  return `room ${roomIndex}`;
-}
-
-function isThereARoomAvailable() {
-  if (rooms.length < 1) return false;
-
-  return rooms.some((room) => isNotFull(room));
-}
-
-function createRoom() {
-  rooms.push([]);
-}
-
-function isNotFull(room) {
-  return room.length < 2;
-}
-
-function getTheFirstRoomNotFullIndex() {
-  return rooms.findIndex((room) => isNotFull(room));
-}
-
-function setUserInRoom(socket, roomIndex) {
-  rooms[roomIndex].push(socket);
-  const roomName = getRoomName(roomIndex);
-
-  socket.join(roomName, () => {
-    console.log(`${roomName} joined`);
-  });
-}
-
-function setWaiting(roomName, roomIndex) {
-  if (rooms[roomIndex].length < 2) {
-    io.to(roomName).emit('start-waiting');
+function setWaiting(room) {
+  if (room.participants.size < 2) {
+    io.to(room.name).emit('start-waiting');
   } else {
-    io.to(roomName).emit('end-waiting');
+    io.to(room.name).emit('end-waiting');
   }
-}
-
-function removeUserInRoom(socket, roomIndex) {
-  rooms[roomIndex] = rooms[roomIndex].filter((user) => user.id !== socket.id);
-}
-
-function removeMessagesByRoomName(roomName) {
-  const messages = Message.removeByRoomName(roomName);
-
-  io.to(roomName).emit('update-messages', messages);
 }
